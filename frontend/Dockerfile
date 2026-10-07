@@ -6,4 +6,5 @@ COPY css /usr/share/nginx/html/css
 COPY js /usr/share/nginx/html/js
 
 EXPOSE 80
-HEALTHCHECK --interval=15s --timeout=3s CMD wget -qO- http://localhost/ >/dev/null || exit 1
+HEALTHCHECK --interval=15s --timeout=3s --retries=3 \
+  CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1
