@@ -1,0 +1,12 @@
+# Non-secret settings. The password lives in a Secret (see README steps), never in Git.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: expense-config
+  namespace: expense-tracker
+data:
+  POSTGRES_USER: expense_user
+  POSTGRES_DB: expense_db
+  POSTGRES_HOST: db
+  POSTGRES_PORT: "5432"
+  CORS_ORIGINS: "*"
