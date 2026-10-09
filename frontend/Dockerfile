@@ -1,10 +1,16 @@
+# Use the official lightweight Nginx image
 FROM nginx:1.27-alpine
 
+# Copy your custom Nginx configuration file
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY index.html /usr/share/nginx/html/
-COPY css /usr/share/nginx/html/css
-COPY js /usr/share/nginx/html/js
 
+# Set the working directory to the default Nginx web root directory
+WORKDIR /usr/share/nginx/html
+
+# Copy all your frontend assets (HTML, CSS, JS) directly into the web root
+COPY index.html .
+COPY css/ ./css
+COPY js/ ./js
+
+# Document that the web server runs on port 80
 EXPOSE 80
-HEALTHCHECK --interval=15s --timeout=3s --retries=3 \
-  CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1
