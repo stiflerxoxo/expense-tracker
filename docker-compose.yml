@@ -35,6 +35,40 @@ services:
 
 
 
+# services:
+#   db:
+#     image: postgres:16-alpine
+#     restart: unless-stopped
+#     environment:
+#       - POSTGRES_USER=expense_user
+#       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#       - POSTGRES_DB=expense_db
+#     volumes:
+#       - pgdata:/var/lib/postgresql/data
+
+#   backend:
+#     image: stiflerhub/expense-tracker-backend:latest
+#     restart: unless-stopped
+#     environment:
+#       - POSTGRES_USER=expense_user
+#       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#       - POSTGRES_DB=expense_db
+#       - POSTGRES_HOST=db
+#       - POSTGRES_PORT=5432
+#     depends_on:
+#       - db
+
+#   frontend:
+#     image: stiflerhub/expense-tracker-frontend:latest
+#     restart: unless-stopped
+#     ports:
+#       - "80:80"
+#     depends_on:
+#       - backend
+
+# volumes:
+#   pgdata:
+
 
 
 
