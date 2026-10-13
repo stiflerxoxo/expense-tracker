@@ -1,4 +1,3 @@
-
 name: CI
 
 on:
@@ -11,6 +10,7 @@ permissions:
   contents: read
 
 jobs:
+  # 1. Run backend tests
   test:
     name: Run backend tests
     runs-on: ubuntu-latest
@@ -34,6 +34,7 @@ jobs:
         run: pytest -q
         working-directory: backend
 
+  # 2. Build and push frontend and backend images
   build-and-push:
     name: Build and push ${{ matrix.service }}
     needs: test
@@ -72,31 +73,56 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
+  # 3. Deploy to EC2 using SSH
   deploy:
     name: Deploy to EC2
     needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Check AWS identity
+        run: aws sts get-caller-identity
+
       - name: Deploy application
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
           SSH_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           IMAGE_TAG: ${{ github.sha }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
+          set -e
+
           echo "$SSH_KEY" > key.pem
           chmod 600 key.pem
 
-          ssh -o StrictHostKeyChecking=no -i key.pem $EC2_USER@$EC2_HOST "
-            set -e
-            sudo k3s kubectl set image deployment/backend backend=stiflerhub/expense-tracker-backend:${IMAGE_TAG:0:7}
-            sudo k3s kubectl set image deployment/frontend frontend=stiflerhub/expense-tracker-frontend:${IMAGE_TAG:0:7}
-            sudo k3s kubectl rollout status deployment/backend
-            sudo k3s kubectl rollout status deployment/frontend
-          "
+          trap 'rm -f key.pem' EXIT
 
-          rm -f key.pem
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -i key.pem \
+            "$EC2_USER@$EC2_HOST" \
+            "DOCKERHUB_USERNAME='$DOCKERHUB_USERNAME' IMAGE_TAG='${GITHUB_SHA:0:7}' bash -s" <<'REMOTE'
+              set -e
+
+              sudo k3s kubectl set image deployment/backend \
+                backend="${DOCKERHUB_USERNAME}/expense-tracker-backend:${IMAGE_TAG}"
+
+              sudo k3s kubectl set image deployment/frontend \
+                frontend="${DOCKERHUB_USERNAME}/expense-tracker-frontend:${IMAGE_TAG}"
+
+              sudo k3s kubectl rollout status deployment/backend --timeout=180s
+              sudo k3s kubectl rollout status deployment/frontend --timeout=180s
+
+              echo "Deployment completed successfully."
+          REMOTE
 
 
 
